@@ -5,19 +5,19 @@ This project provides secure user authentication using **JWT (Access & Refresh T
 
 ---
 
-## 🚀 Features
+## Features
 
-- ✅ User Registration
-- ✅ Login & Logout
-- ✅ JWT Authentication
+- User Registration
+- Login & Logout
+- JWT Authentication
   - Access Token
   - Refresh Token
-- ✅ OTP Verification via Email (Gmail SMTP)
-- ✅ Forgot Password & Reset Password
-- ✅ Secure Password Handling
-- ✅ Token Validation & Expiry Handling
-- ✅ Global Exception Handling
-- ✅ Clean Layered Architecture
+- OTP Verification via Email (Gmail SMTP)
+- Forgot Password & Reset Password
+- Secure Password Handling
+- Token Validation & Expiry Handling
+- Global Exception Handling
+- Clean Layered Architecture
 
 ---
 
