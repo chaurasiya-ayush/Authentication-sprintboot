@@ -27,9 +27,6 @@ public class RegisterRequest{
 			message = "Phone number must be 10 digits"
 			)
     private String phoneNumber;
-	@NotNull(message = "Date of birth is required")
-	 @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private LocalDate dateOfBirth;
 	@NotNull(message = "Gender is required")
     private Gender gender;
     
@@ -83,14 +80,6 @@ public class RegisterRequest{
 	}
 
 
-	public LocalDate getDateOfBirth() {
-		return dateOfBirth;
-	}
-
-
-	public void setDateOfBirth(LocalDate dateOfBirth) {
-		this.dateOfBirth = dateOfBirth;
-	}
 
 
 	public Gender getGender() {
@@ -106,8 +95,10 @@ public class RegisterRequest{
 	@Override
 	public String toString() {
 		return "RegisterRequest [email=" + email + ", password=" + password + ", firstName=" + firstName + ", lastName="
-				+ lastName + ", phoneNumber=" + phoneNumber + ", dateOfBirth=" + dateOfBirth + ", gender=" + gender
-				+ "]";
+				+ lastName + ", phoneNumber=" + phoneNumber + ", gender=" + gender + "]";
 	}
+
+
+	
     
 }

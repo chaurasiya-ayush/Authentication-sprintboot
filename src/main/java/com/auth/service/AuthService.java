@@ -16,8 +16,14 @@ import com.auth.entity.RefreshToken;
 import com.auth.entity.User;
 import com.auth.entity.VerificationToken;
 import com.auth.exception.EmailAlreadyExistsException;
+import com.auth.exception.EmailNotFoundException;
+import com.auth.exception.EmailNotVerifiedException;
+import com.auth.exception.IncorrectPasswordException;
 import com.auth.exception.InvalidCredentialsException;
 import com.auth.exception.OtpInvalidException;
+import com.auth.exception.RefreshTokenExpiredException;
+import com.auth.exception.RefreshTokenInvalidException;
+import com.auth.exception.RefreshTokenRevokedException;
 import com.auth.exception.ResetNotAllowedException;
 import com.auth.exception.SamePasswordException;
 import com.auth.exception.TokenInvalidException;
@@ -66,7 +72,6 @@ public class AuthService {
 		user.setFirstName(request.getFirstName());
 		user.setLastName(request.getLastName());
 		user.setPhoneNumber(request.getPhoneNumber());
-		user.setDateOfBirth(request.getDateOfBirth());
 		user.setGender(request.getGender());
 
 	
@@ -85,7 +90,6 @@ public class AuthService {
 		// Reason: user ko link mile jisse wo account enable kare
 		mailService.sendVerificationEmail(user.getEmail(), token.getToken());
 	}
-
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
 			VerificationTokenRepository tokenRepository, MailService mailService,
 			RefreshTokenRepository refreshTokenRepository, JwtService jwtService,
@@ -101,7 +105,6 @@ public class AuthService {
 		this.passwordResetOtpRepository = passwordResetOtpRepository;
 		this.passwordResetValidationRepository = passwordResetValidationRepository;
 	}
-
 	public boolean verifyToken(String token) {
 
 		VerificationToken verificationToken = tokenRepository.findByToken(token).orElse(null);
@@ -123,51 +126,65 @@ public class AuthService {
 
 		return true;
 	}
-
+	@Transactional
 	public Map<String, String> login(LoginRequest request) {
 
-		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+	    User user = userRepository.findByEmail(request.getEmail())
+	            .orElseThrow(() ->
+	                new EmailNotFoundException("Email not registered"));
 
-		if (!user.isEnabled()) {
-			throw new InvalidCredentialsException("Email not verified");
-		}
+	    if (!user.isEnabled()) {
+	        throw new EmailNotVerifiedException("Please verify your email first");
+	    }
 
-		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			throw new InvalidCredentialsException("Invalid credentials");
-		}
+	    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+	        throw new IncorrectPasswordException("Incorrect password");
+	    }
 
-		String accessToken = jwtService.generateAccessToken(user.getEmail());
+	    // 🔥 delete old refresh tokens (single session)
+	    refreshTokenRepository.deleteByUser(user);
 
-		String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+	    String accessToken = jwtService.generateAccessToken(user.getEmail());
 
-		RefreshToken refresh = new RefreshToken();
-		refresh.setToken(refreshToken);
-		refresh.setUser(user);
-		refresh.setExpiryDate(LocalDateTime.now().plusDays(7));
+	    String refreshTokenValue = UUID.randomUUID().toString();
 
-		refreshTokenRepository.save(refresh);
+	    RefreshToken refresh = new RefreshToken();
+	    refresh.setToken(refreshTokenValue);
+	    refresh.setUser(user);
+	    refresh.setExpiryDate(LocalDateTime.now().plusDays(7));
+	    refresh.setRevoked(false);
 
-		Map<String, String> response = new HashMap<>();
-		response.put("accessToken", accessToken);
-		response.put("refreshToken", refreshToken);
+	    refreshTokenRepository.save(refresh);
 
-		return response;
+	    return Map.of(
+	        "accessToken", accessToken,
+	        "refreshToken", refreshTokenValue
+	    );
 	}
+
 
 	public Map<String, String> refreshAccessToken(String refreshToken) {
 
-		RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
-				.orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+    RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
+            .orElseThrow(() ->
+                new RefreshTokenInvalidException("Invalid refresh token"));
 
-		if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-			throw new RuntimeException("Refresh token expired");
-		}
+    if (token.isRevoked()) {
+        throw new RefreshTokenRevokedException(
+                "You are logged out. Please login again.");
+    }
 
-		String newAccessToken = jwtService.generateAccessToken(token.getUser().getEmail());
+    if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+        throw new RefreshTokenExpiredException(
+                "Refresh token expired. Please login again.");
+    }
 
-		return Map.of("accessToken", newAccessToken);
-	}
+    String newAccessToken =
+            jwtService.generateAccessToken(
+                    token.getUser().getEmail());
+
+    return Map.of("accessToken", newAccessToken);
+     }
 
 	public void forgotPassword(String email) {
 
@@ -239,5 +256,16 @@ public class AuthService {
 		validation.setActive(false);
 		passwordResetValidationRepository.save(validation);
 		
+	}
+	@Transactional
+	public void logout(String refreshToken) {
+		System.out.println("LOGOUT TOKEN RECEIVED: " + refreshToken);
+
+	    RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
+	            .orElseThrow(() ->
+	                new RefreshTokenInvalidException("Invalid refresh token"));
+
+	    token.setRevoked(true);
+	    refreshTokenRepository.save(token);
 	}
 }

@@ -48,7 +48,6 @@ public class User {
     @Column(unique = true)
     private String phoneNumber;
 
-    private LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
     private Gender gender; 
@@ -121,13 +120,7 @@ public class User {
         this.phoneNumber = phoneNumber;
     }
 
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
+    
 
     public Gender getGender() {
         return gender;

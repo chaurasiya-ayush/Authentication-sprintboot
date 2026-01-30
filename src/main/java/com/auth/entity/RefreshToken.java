@@ -2,55 +2,68 @@ package com.auth.entity;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 
 @Entity
+@Table(name = "refresh_tokens")
 public class RefreshToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, length = 500)
     private String token;
 
+    @Column(nullable = false)
     private LocalDateTime expiryDate;
 
-    @OneToOne
+    @Column(nullable = false)
+    private boolean revoked = false; // 🔥 LOGOUT FLAG
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-	public Long getId() {
-		return id;
-	}
+    // ===== getters & setters =====
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public String getToken() {
-		return token;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public void setToken(String token) {
-		this.token = token;
-	}
+    public String getToken() {
+        return token;
+    }
 
-	public LocalDateTime getExpiryDate() {
-		return expiryDate;
-	}
+    public void setToken(String token) {
+        this.token = token;
+    }
 
-	public void setExpiryDate(LocalDateTime expiryDate) {
-		this.expiryDate = expiryDate;
-	}
+    public LocalDateTime getExpiryDate() {
+        return expiryDate;
+    }
 
-	public User getUser() {
-		return user;
-	}
+    public void setExpiryDate(LocalDateTime expiryDate) {
+        this.expiryDate = expiryDate;
+    }
 
-	public void setUser(User user) {
-		this.user = user;
-	}
+    public boolean isRevoked() {
+        return revoked;
+    }
+
+    public void setRevoked(boolean revoked) {
+        this.revoked = revoked;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

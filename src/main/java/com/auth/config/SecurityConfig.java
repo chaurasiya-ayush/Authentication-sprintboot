@@ -7,47 +7,72 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.auth.security.JwtAuthFilter;
+
 @Configuration
 public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // 🔥 CORS ENABLE
+            // 🔥 CORS
             .cors(Customizer.withDefaults())
 
-            // ❌ CSRF disable (JWT / REST API ke liye)
+            // ❌ CSRF (JWT = stateless)
             .csrf(csrf -> csrf.disable())
+
+            // ❌ disable default Spring logout
+            .logout(logout -> logout.disable())
+
+            // ❌ disable basic auth popup
+            .httpBasic(Customizer.withDefaults())
 
             // 🔐 Authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/api/auth/**"   // register, login, verify, refresh
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/refresh",
+                    "/api/auth/logout",
+                    "/api/auth/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
-             // ❌ basic auth nahi chahiye
-            .httpBasic(Customizer.withDefaults());
+
+            // 🔐 JWT FILTER
+            .addFilterBefore(
+                jwtAuthFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
 
-    // 🔥🔥🔥 THIS IS THE MOST IMPORTANT PART (CORS CONFIG)
+    // 🌍 CORS CONFIG
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOrigins(List.of("http://localhost:3000")); // Next.js
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
